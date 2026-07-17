@@ -1,6 +1,16 @@
 {
-  "extends": "../../tsconfig.base.json",
+  // Self-contained on purpose: the Deploy to Cloudflare button clones only this
+  // subdirectory, so extending the repo-root tsconfig.base.json breaks its build.
+  // Keep these compilerOptions in sync with tsconfig.base.json.
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUncheckedIndexedAccess": true,
     "types": ["@cloudflare/workers-types"],
     "lib": ["ES2022"],
     "noEmit": true
