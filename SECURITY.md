@@ -2,13 +2,13 @@
 
 ## Reporting a vulnerability
 
-Please report vulnerabilities privately via [GitHub private vulnerability reporting](https://github.com/dannyball710/ccusage-cloud/security/advisories/new). Do not open public issues for security problems.
+Please report vulnerabilities privately via [GitHub private vulnerability reporting](https://github.com/dannyball710/ccusage-hub/security/advisories/new). Do not open public issues for security problems.
 
 You can expect an initial response within a week. Please include reproduction steps and the affected component (CLI, Worker API, or dashboard).
 
 ## Supported versions
 
-Only the latest released version of the `ccusage-cloud` npm package and the `main` branch of the Worker are supported with security fixes.
+Only the latest released version of the `ccusage-hub` npm package and the `main` branch of the Worker are supported with security fixes.
 
 ## Security model
 

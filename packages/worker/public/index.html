@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ccusage-cloud</title>
+    <title>ccusage-hub</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232a78d6'/%3E%3Crect x='24' y='50' width='13' height='28' rx='3' fill='white'/%3E%3Crect x='44' y='34' width='13' height='44' rx='3' fill='white'/%3E%3Crect x='64' y='22' width='13' height='56' rx='3' fill='white'/%3E%3C/svg%3E" />
     <style>
       /* Theme tokens (dataviz reference palette) */
@@ -272,7 +272,7 @@
     <!-- Auth screen: setup (first run) or login -->
     <div id="gate" class="gate hidden">
       <form id="auth-form" class="gate-card">
-        <h1 id="auth-title">ccusage-cloud</h1>
+        <h1 id="auth-title">ccusage-hub</h1>
         <p id="auth-sub">Sign in to view usage.</p>
         <div class="field">
           <label class="form-label" for="pw-input">Password</label>
@@ -291,7 +291,7 @@
     <div id="app" class="wrap hidden">
       <header class="top">
         <div class="brand">
-          <h1>ccusage-cloud</h1>
+          <h1>ccusage-hub</h1>
           <p id="range-label">Cross-machine AI token usage</p>
         </div>
         <div class="controls">
@@ -428,8 +428,8 @@
       "use strict";
 
       // constants
-      var SESSION_KEY = "ccusage-cloud-session";
-      var THEME_KEY = "ccusage-cloud-theme"; // "auto" | "light" | "dark"
+      var SESSION_KEY = "ccusage-hub-session";
+      var THEME_KEY = "ccusage-hub-theme"; // "auto" | "light" | "dark"
 
       // dataviz reference palette, keyed by mode. Categorical slots in fixed order.
       var THEMES = {
@@ -1032,7 +1032,7 @@
       // double-quoted value is safe on both PowerShell and bash.
       function buildInitCommand(key, machine, editor) {
         var origin = window.location.origin;
-        var cmd = "npx -y ccusage-cloud@latest init --endpoint " + origin + " --key " + key;
+        var cmd = "npx -y ccusage-hub@latest init --endpoint " + origin + " --key " + key;
         var m = (machine || "").trim();
         if (m) cmd += " --machine " + (/\s/.test(m) ? '"' + m + '"' : m);
         cmd += " --editor " + editor + " --yes";
@@ -1048,7 +1048,7 @@
         } else {
           note.classList.remove("hidden");
           note.textContent =
-            "No auto-sync hook is installed for this editor — run ccusage-cloud sync on that machine (or rely on another machine's Claude Code hook if home is shared).";
+            "No auto-sync hook is installed for this editor — run ccusage-hub sync on that machine (or rely on another machine's Claude Code hook if home is shared).";
         }
       }
 
@@ -1135,7 +1135,7 @@
         $("app").classList.add("hidden");
         $("gate").classList.remove("hidden");
         var setup = m === "setup";
-        $("auth-title").textContent = setup ? "Welcome to ccusage-cloud" : "ccusage-cloud";
+        $("auth-title").textContent = setup ? "Welcome to ccusage-hub" : "ccusage-hub";
         $("auth-sub").textContent = setup
           ? "First run — choose an admin password (min 8 characters)."
           : "Sign in to view usage.";
@@ -1216,7 +1216,7 @@
 
       // boot
       function boot() {
-        localStorage.removeItem("ccusage-cloud-token"); // drop the retired v1 token key
+        localStorage.removeItem("ccusage-hub-token"); // drop the retired v1 token key
         applyThemeAttr();
         wireControls();
         wireKeys();

@@ -9,9 +9,9 @@ export interface Config {
   sinceDays?: number;
 }
 
-// CCUSAGE_CLOUD_CONFIG overrides the config path (used for testing).
+// CCUSAGE_HUB_CONFIG overrides the config path (used for testing).
 export function configPath(): string {
-  return process.env.CCUSAGE_CLOUD_CONFIG || join(os.homedir(), ".ccusage-cloud.json");
+  return process.env.CCUSAGE_HUB_CONFIG || join(os.homedir(), ".ccusage-hub.json");
 }
 
 export function loadConfig(): Config | null {

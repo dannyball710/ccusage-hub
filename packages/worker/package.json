@@ -1,5 +1,5 @@
 {
-  "name": "@ccusage-cloud/worker",
+  "name": "@ccusage-hub/worker",
   "private": true,
   "type": "module",
   "scripts": {

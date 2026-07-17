@@ -1,4 +1,4 @@
-# ccusage-cloud API Contract
+# ccusage-hub API Contract
 
 Shared contract between CLI (uploader), Worker (API), and Dashboard. Changes here require updating all three.
 
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 ## CLI init (non-interactive) — for the dashboard command generator
 
 ```
-npx -y ccusage-cloud@latest init --endpoint <workerUrl> --key <ccu_...> [--machine <name>] --editor <claude|codex|gemini|copilot|none> --yes
+npx -y ccusage-hub@latest init --endpoint <workerUrl> --key <ccu_...> [--machine <name>] --editor <claude|codex|gemini|copilot|none> --yes
 ```
 
 - `--yes`: no prompts; missing `--machine` → hostname fallback at sync time.

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in improving ccusage-cloud!
+Thanks for your interest in improving ccusage-hub!
 
 ## Development setup
 
@@ -27,7 +27,7 @@ The dashboard is a single static file (`packages/worker/public/index.html`, vani
 cd packages/cli
 pnpm build
 node dist/index.cjs sync --dry-run     # uses your real local ccusage data, uploads nothing
-CCUSAGE_CLOUD_CONFIG=/tmp/test.json node dist/index.cjs init ...   # test against a scratch config
+CCUSAGE_HUB_CONFIG=/tmp/test.json node dist/index.cjs init ...   # test against a scratch config
 ```
 
 The `sync --quiet` path is used as a Claude Code `SessionEnd` hook and must **never** exit non-zero or block — keep that invariant when touching `packages/cli/src/index.ts`.

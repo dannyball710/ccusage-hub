@@ -1,12 +1,12 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ccusage-cloud",
+  "name": "ccusage-hub",
   "main": "src/index.ts",
   "compatibility_date": "2025-01-01",
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "ccusage-cloud",
+      "database_name": "ccusage-hub",
       // Placeholder: deploy step replaces with the real remote database_id.
       // A dummy uuid keeps `wrangler d1 execute --local` working offline.
       "database_id": "00000000-0000-0000-0000-000000000000"

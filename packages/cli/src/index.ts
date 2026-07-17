@@ -6,20 +6,20 @@ import { collect } from "./collect.js";
 import { configPath, loadConfig, resolveMachine, type Config } from "./config.js";
 import { upload } from "./upload.js";
 
-const HOOK_COMMAND = "npx -y ccusage-cloud@latest sync --quiet";
+const HOOK_COMMAND = "npx -y ccusage-hub@latest sync --quiet";
 
 // --editor claude installs the Claude Code hook; any other value writes config only.
 const VALID_EDITORS = ["claude", "codex", "gemini", "copilot", "none"];
 
-const HELP = `ccusage-cloud - sync local AI-coding token usage to your Cloudflare Worker
+const HELP = `ccusage-hub - sync local AI-coding token usage to your Cloudflare Worker
 
 Usage:
-  ccusage-cloud sync [--quiet] [--since-days N] [--dry-run]
-  ccusage-cloud init [--endpoint <url>] [--key <ccu_...>] [--machine <name>]
+  ccusage-hub sync [--quiet] [--since-days N] [--dry-run]
+  ccusage-hub init [--endpoint <url>] [--key <ccu_...>] [--machine <name>]
                      [--editor <claude|codex|gemini|copilot|none>] [--yes]
                      [--settings-path <path>] [--no-hook]
-  ccusage-cloud status
-  ccusage-cloud help
+  ccusage-hub status
+  ccusage-hub help
 
 Commands:
   sync     Collect usage via ccusage and upload it.
@@ -36,7 +36,7 @@ Commands:
   status   Show config (token masked) and check endpoint reachability.
 
 Env:
-  CCUSAGE_CLOUD_CONFIG   Override config file path (default ~/.ccusage-cloud.json).
+  CCUSAGE_HUB_CONFIG   Override config file path (default ~/.ccusage-hub.json).
 `;
 
 interface Flags {
@@ -82,15 +82,15 @@ async function cmdSync(flags: Flags): Promise<number> {
   const dryRun = flags.bool.has("dry-run");
   const fail = (msg: string): number => {
     if (quiet) {
-      process.stderr.write(`ccusage-cloud: ${msg}\n`);
+      process.stderr.write(`ccusage-hub: ${msg}\n`);
       return 0; // hook mode: never break session end
     }
-    process.stderr.write(`ccusage-cloud: ${msg}\n`);
+    process.stderr.write(`ccusage-hub: ${msg}\n`);
     return 1;
   };
 
   const cfg = loadConfig();
-  if (!cfg) return fail("no config found. Run: ccusage-cloud init");
+  if (!cfg) return fail("no config found. Run: ccusage-hub init");
 
   let sinceDays: number;
   if (flags.value.has("since-days")) {
@@ -195,7 +195,7 @@ function installHook(settingsPath: string): string {
 
   const already = existing.some((entry) =>
     Array.isArray(entry?.hooks) &&
-    entry.hooks.some((h) => typeof h?.command === "string" && h.command.includes("ccusage-cloud")),
+    entry.hooks.some((h) => typeof h?.command === "string" && h.command.includes("ccusage-hub")),
   );
   if (already) return "hook already installed";
 
@@ -215,7 +215,7 @@ async function cmdInit(flags: Flags): Promise<number> {
   let editor = flags.value.get("editor")?.toLowerCase();
   if (editor !== undefined && !VALID_EDITORS.includes(editor)) {
     process.stderr.write(
-      `ccusage-cloud: invalid --editor "${editor}" (expected ${VALID_EDITORS.join("|")})\n`,
+      `ccusage-hub: invalid --editor "${editor}" (expected ${VALID_EDITORS.join("|")})\n`,
     );
     return 1;
   }
@@ -247,7 +247,7 @@ async function cmdInit(flags: Flags): Promise<number> {
       }
     }
     if (!/^https?:\/\/.+/i.test(endpoint)) {
-      process.stderr.write("ccusage-cloud: missing or invalid --endpoint\n");
+      process.stderr.write("ccusage-hub: missing or invalid --endpoint\n");
       return 1;
     }
     endpoint = endpoint.replace(/\/$/, "");
@@ -261,7 +261,7 @@ async function cmdInit(flags: Flags): Promise<number> {
       }
     }
     if (!token) {
-      process.stderr.write("ccusage-cloud: missing --key\n");
+      process.stderr.write("ccusage-hub: missing --key\n");
       return 1;
     }
 
@@ -308,13 +308,13 @@ async function cmdInit(flags: Flags): Promise<number> {
       try {
         msg = installHook(settingsPath);
       } catch (err) {
-        process.stderr.write(`ccusage-cloud: ${(err as Error).message}\n`);
+        process.stderr.write(`ccusage-hub: ${(err as Error).message}\n`);
         return 1;
       }
       process.stdout.write(`${msg} (${settingsPath})\n`);
     } else {
       process.stdout.write(
-        "No hook installed; this machine syncs when you run 'ccusage-cloud sync' manually " +
+        "No hook installed; this machine syncs when you run 'ccusage-hub sync' manually " +
           "(or via another machine's Claude Code hook if home is shared).\n",
       );
     }
@@ -328,7 +328,7 @@ async function cmdInit(flags: Flags): Promise<number> {
 async function cmdStatus(): Promise<number> {
   const cfg = loadConfig();
   if (!cfg) {
-    process.stderr.write("ccusage-cloud: no config found. Run: ccusage-cloud init\n");
+    process.stderr.write("ccusage-hub: no config found. Run: ccusage-hub init\n");
     return 1;
   }
   process.stdout.write(`Config:    ${configPath()}\n`);

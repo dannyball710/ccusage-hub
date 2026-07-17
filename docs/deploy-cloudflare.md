@@ -4,7 +4,7 @@ The dashboard + API is a single Cloudflare Worker with a D1 database. Both fit c
 
 ## Option A — Deploy to Cloudflare button (recommended)
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dannyball710/ccusage-cloud/tree/main/packages/worker)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dannyball710/ccusage-hub/tree/main/packages/worker)
 
 What the button does:
 
@@ -20,8 +20,8 @@ After deployment, open the Worker URL — the first visit asks you to set the ad
 Requirements: Node.js >= 18 and a Cloudflare account.
 
 ```sh
-git clone https://github.com/dannyball710/ccusage-cloud.git
-cd ccusage-cloud/packages/worker
+git clone https://github.com/dannyball710/ccusage-hub.git
+cd ccusage-hub/packages/worker
 npm install
 npx wrangler login
 ```
@@ -29,7 +29,7 @@ npx wrangler login
 1. Create the D1 database and copy the `database_id` it prints into `wrangler.jsonc` (replace the placeholder zero UUID):
 
    ```sh
-   npx wrangler d1 create ccusage-cloud
+   npx wrangler d1 create ccusage-hub
    ```
 
 2. Apply migrations and deploy:
@@ -51,7 +51,7 @@ Schema and Worker upgrades are designed to be a single redeploy, with **no data 
 **If you deployed with the button** — your clone redeploys on every push, running the same deploy script (migrations included). To pull in a new upstream version:
 
 ```sh
-git remote add upstream https://github.com/dannyball710/ccusage-cloud.git   # once
+git remote add upstream https://github.com/dannyball710/ccusage-hub.git   # once
 git fetch upstream
 git merge upstream/main
 git push        # Workers Builds applies pending migrations and redeploys

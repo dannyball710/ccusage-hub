@@ -3,8 +3,8 @@ name: Release
 # Publishes packages/cli to npm when a GitHub release is published.
 # Uses npm trusted publishing (OIDC) with provenance — no npm token is stored
 # in this repository. Configure the trusted publisher on npmjs.com:
-# package "ccusage-cloud" -> Settings -> Trusted publisher ->
-# GitHub Actions, repo dannyball710/ccusage-cloud, workflow release.yml.
+# package "ccusage-hub" -> Settings -> Trusted publisher ->
+# GitHub Actions, repo dannyball710/ccusage-hub, workflow release.yml.
 
 on:
   release:
@@ -46,7 +46,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm --filter ccusage-cloud build
+      - run: pnpm --filter ccusage-hub build
 
       - name: Publish to npm with provenance
         working-directory: packages/cli

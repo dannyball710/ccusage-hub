@@ -1,7 +1,7 @@
-# ccusage-cloud
+# ccusage-hub
 
-[![CI](https://github.com/dannyball710/ccusage-cloud/actions/workflows/ci.yml/badge.svg)](https://github.com/dannyball710/ccusage-cloud/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/ccusage-cloud)](https://www.npmjs.com/package/ccusage-cloud)
+[![CI](https://github.com/dannyball710/ccusage-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/dannyball710/ccusage-hub/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/ccusage-hub)](https://www.npmjs.com/package/ccusage-hub)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Cross-machine AI coding token usage tracker — self-hosted on your own Cloudflare account.
@@ -11,7 +11,7 @@ Wraps [ccusage](https://github.com/ccusage/ccusage) to collect daily token usage
 ```
 [each machine]                       [Cloudflare]
 Claude Code SessionEnd hook
-  → npx ccusage-cloud sync --quiet
+  → npx ccusage-hub sync --quiet
      → ccusage daily --json --by-agent
      → POST /api/usage ──────→ Worker ──→ D1 (upsert by machine/agent/date/model)
                                    │
@@ -30,7 +30,7 @@ browser ←── dashboard (charts) ←───┘
 
 ### 1. Deploy the Worker
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dannyball710/ccusage-cloud/tree/main/packages/worker)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dannyball710/ccusage-hub/tree/main/packages/worker)
 
 The button clones this repository into your GitHub account, provisions a D1 database, applies migrations, and deploys the Worker. Prefer the CLI? See [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md) for manual `wrangler` steps.
 
@@ -45,44 +45,44 @@ Open the deployed Worker URL in a browser. The first visit asks you to set an ad
 In the dashboard: **Keys → create an API key**. The command generator produces a one-liner (pick editor + optional device name):
 
 ```sh
-npx -y ccusage-cloud@latest init --endpoint https://<your-worker-url> --key ccu_xxx --machine my-desktop --editor claude --yes
+npx -y ccusage-hub@latest init --endpoint https://<your-worker-url> --key ccu_xxx --machine my-desktop --editor claude --yes
 ```
 
 - `--editor claude` installs the Claude Code `SessionEnd` hook into `~/.claude/settings.json` (merged, existing hooks preserved).
 - Other editors (`codex|gemini|copilot|none`) write config only — run `sync` manually or via your own trigger. Uploads always cover **all** agents' data regardless of which editor triggered them, because ccusage scans everything.
 - `--machine` is optional; the hostname is used as a fallback, resolved at sync time.
-- Interactive mode also works: `npx -y ccusage-cloud@latest init`.
+- Interactive mode also works: `npx -y ccusage-hub@latest init`.
 
 That's it. Every Claude Code session end now syncs the last 7 days of usage from that machine.
 
 ## CLI reference
 
 ```
-ccusage-cloud sync [--quiet] [--since-days N] [--dry-run]
-ccusage-cloud init [--endpoint <url>] [--key <ccu_...>] [--machine <name>]
+ccusage-hub sync [--quiet] [--since-days N] [--dry-run]
+ccusage-hub init [--endpoint <url>] [--key <ccu_...>] [--machine <name>]
                    [--editor <claude|codex|gemini|copilot|none>] [--yes]
-ccusage-cloud status
-ccusage-cloud help
+ccusage-hub status
+ccusage-hub help
 ```
 
 | Command | Description |
 | --- | --- |
 | `sync` | Collect usage via ccusage and upload. `--dry-run` prints rows without uploading; `--quiet` is hook mode (never fails the session). |
-| `init` | Write `~/.ccusage-cloud.json` and optionally install the Claude Code hook. |
+| `init` | Write `~/.ccusage-hub.json` and optionally install the Claude Code hook. |
 | `status` | Print config and check Worker health. |
 
-Config file (`~/.ccusage-cloud.json`):
+Config file (`~/.ccusage-hub.json`):
 
 ```json
 {
-  "endpoint": "https://ccusage-cloud.example.workers.dev",
+  "endpoint": "https://ccusage-hub.example.workers.dev",
   "token": "ccu_...",
   "machineName": "my-desktop",
   "sinceDays": 7
 }
 ```
 
-`machineName` and `sinceDays` are optional. `CCUSAGE_CLOUD_CONFIG` overrides the config path.
+`machineName` and `sinceDays` are optional. `CCUSAGE_HUB_CONFIG` overrides the config path.
 
 ## Dashboard
 
@@ -90,7 +90,7 @@ Log in with the admin password. Charts: daily cost stacked by machine/agent/mode
 
 ## Repository layout
 
-- `packages/cli` — the npm package [`ccusage-cloud`](https://www.npmjs.com/package/ccusage-cloud) (`init` / `sync` / `status`).
+- `packages/cli` — the npm package [`ccusage-hub`](https://www.npmjs.com/package/ccusage-hub) (`init` / `sync` / `status`).
 - `packages/worker` — Cloudflare Worker: upload API + stats API + static dashboard. API spec: [docs/api-contract.md](docs/api-contract.md).
 - `docs/deploy-cloudflare.md` — deployment guide (button + manual).
 

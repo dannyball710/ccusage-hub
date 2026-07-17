@@ -1,16 +1,16 @@
 {
-  "name": "ccusage-cloud",
+  "name": "ccusage-hub",
   "version": "0.1.0",
   "description": "Collect local AI-coding token usage via ccusage and sync it to your Cloudflare Worker.",
   "license": "MIT",
   "author": "Danny Chyou",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dannyball710/ccusage-cloud.git",
+    "url": "git+https://github.com/dannyball710/ccusage-hub.git",
     "directory": "packages/cli"
   },
-  "homepage": "https://github.com/dannyball710/ccusage-cloud#readme",
-  "bugs": "https://github.com/dannyball710/ccusage-cloud/issues",
+  "homepage": "https://github.com/dannyball710/ccusage-hub#readme",
+  "bugs": "https://github.com/dannyball710/ccusage-hub/issues",
   "keywords": [
     "ccusage",
     "claude-code",
@@ -24,7 +24,7 @@
   },
   "type": "module",
   "bin": {
-    "ccusage-cloud": "./dist/index.cjs"
+    "ccusage-hub": "./dist/index.cjs"
   },
   "files": [
     "dist"

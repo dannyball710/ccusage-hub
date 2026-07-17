@@ -1,10 +1,10 @@
 {
-  "name": "ccusage-cloud-monorepo",
+  "name": "ccusage-hub-monorepo",
   "private": true,
   "scripts": {
     "build": "pnpm -r build",
-    "dev:worker": "pnpm --filter @ccusage-cloud/worker dev",
-    "deploy:worker": "pnpm --filter @ccusage-cloud/worker deploy"
+    "dev:worker": "pnpm --filter @ccusage-hub/worker dev",
+    "deploy:worker": "pnpm --filter @ccusage-hub/worker deploy"
   },
   "packageManager": "pnpm@11.1.1"
 }
