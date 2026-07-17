@@ -8,12 +8,8 @@ export async function cmdSync(flags: Flags): Promise<number> {
   const quiet = flags.bool.has("quiet");
   const dryRun = flags.bool.has("dry-run");
   const fail = (msg: string): number => {
-    if (quiet) {
-      process.stderr.write(`ccusage-hub: ${msg}\n`);
-      return 0; // hook mode: never break session end
-    }
     process.stderr.write(`ccusage-hub: ${msg}\n`);
-    return 1;
+    return quiet ? 0 : 1; // hook mode: never break session end
   };
 
   const cfg = loadConfig();

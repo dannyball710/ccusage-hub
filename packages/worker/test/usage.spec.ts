@@ -91,6 +91,36 @@ describe("POST /api/usage validation", () => {
     await expect400({ machine: "m", rows: [row({ date: "2026/07/01" })] }, "row 0: date must be YYYY-MM-DD");
   });
 
+  it("rejects impossible calendar dates", async () => {
+    const { key } = await adminAndKey();
+    // 2026-02-29 is impossible because 2026 is not a leap year.
+    for (const date of ["2026-13-01", "2026-02-30", "2026-04-31", "2026-02-29"]) {
+      const res = await postJson("/api/usage", { machine: "m", rows: [row({ date })] }, key);
+      expect(res.status).toBe(400);
+      expect(await json(res)).toEqual({ ok: false, error: "row 0: date must be YYYY-MM-DD" });
+    }
+  });
+
+  it("accepts a leap-year Feb 29", async () => {
+    const { key } = await adminAndKey();
+    const res = await postJson("/api/usage", { machine: "m", rows: [row({ date: "2024-02-29" })] }, key);
+    expect(await json(res)).toEqual({ ok: true, upserted: 1 });
+  });
+
+  it("rejects a machine longer than 200 chars", async () => {
+    await expect400({ machine: "m".repeat(201), rows: [] }, "machine too long (max 200)");
+  });
+
+  it("rejects agent and model longer than 200 chars", async () => {
+    const { key } = await adminAndKey();
+    const agentRes = await postJson("/api/usage", { machine: "m", rows: [row({ agent: "a".repeat(201) })] }, key);
+    expect(agentRes.status).toBe(400);
+    expect(await json(agentRes)).toEqual({ ok: false, error: "row 0: agent too long (max 200)" });
+    const modelRes = await postJson("/api/usage", { machine: "m", rows: [row({ model: "x".repeat(201) })] }, key);
+    expect(modelRes.status).toBe(400);
+    expect(await json(modelRes)).toEqual({ ok: false, error: "row 0: model too long (max 200)" });
+  });
+
   it("rejects non-numeric token fields", async () => {
     await expect400(
       { machine: "m", rows: [{ ...row(), inputTokens: "10" }] },

@@ -24,14 +24,20 @@ export async function cmdInit(flags: Flags): Promise<number> {
   // would be narrowed to null at the finally by control-flow analysis.
   const state: { rl: ReturnType<typeof createInterface> | null } = { rl: null };
   let lines: AsyncIterableIterator<string> | null = null;
-  const ask = async (prompt: string): Promise<string> => {
+  // Returns null at stdin EOF; callers must abort then, because re-prompting
+  // the exhausted iterator would spin forever.
+  const ask = async (prompt: string): Promise<string | null> => {
     if (!lines) {
       state.rl = createInterface({ input: process.stdin });
       lines = state.rl[Symbol.asyncIterator]();
     }
     process.stdout.write(prompt);
     const { value, done } = await lines.next();
-    return done ? "" : String(value);
+    return done ? null : String(value);
+  };
+  const promptEof = (): number => {
+    process.stderr.write("ccusage-hub: stdin closed before input was complete\n");
+    return 1;
   };
 
   try {
@@ -40,7 +46,9 @@ export async function cmdInit(flags: Flags): Promise<number> {
     let endpoint = flags.value.get("endpoint")?.trim() ?? "";
     if (!endpoint && !yes) {
       while (true) {
-        endpoint = (await ask("Worker endpoint URL (https://...): ")).trim();
+        const ans = await ask("Worker endpoint URL (https://...): ");
+        if (ans === null) return promptEof();
+        endpoint = ans.trim();
         if (/^https?:\/\/.+/i.test(endpoint)) break;
         process.stdout.write("  Please enter a valid http(s) URL.\n");
       }
@@ -54,7 +62,9 @@ export async function cmdInit(flags: Flags): Promise<number> {
     let token = flags.value.get("key")?.trim() ?? "";
     if (!token && !yes) {
       while (true) {
-        token = (await ask("API key (ccu_...): ")).trim();
+        const ans = await ask("API key (ccu_...): ");
+        if (ans === null) return promptEof();
+        token = ans.trim();
         if (token) break;
         process.stdout.write("  Key cannot be empty.\n");
       }
@@ -67,17 +77,17 @@ export async function cmdInit(flags: Flags): Promise<number> {
     // Machine name is optional; omitting it falls back to hostname at sync time.
     let machineName = flags.value.get("machine")?.trim() ?? "";
     if (!flags.value.has("machine") && !yes) {
-      machineName = (
-        await ask(`Machine name (leave empty to use hostname: ${hostname}): `)
-      ).trim();
+      const ans = await ask(`Machine name (leave empty to use hostname: ${hostname}): `);
+      if (ans === null) return promptEof();
+      machineName = ans.trim();
     }
 
     // Editor defaults to claude; prompt for it interactively when not provided.
     if (editor === undefined && !yes) {
       while (true) {
-        const ans = (await ask(`Editor (${EDITOR_IDS.join("|")}) [claude]: `))
-          .trim()
-          .toLowerCase();
+        const raw = await ask(`Editor (${EDITOR_IDS.join("|")}) [claude]: `);
+        if (raw === null) return promptEof();
+        const ans = raw.trim().toLowerCase();
         if (!ans) break; // keep default (claude)
         if (EDITOR_IDS.includes(ans)) {
           editor = ans;

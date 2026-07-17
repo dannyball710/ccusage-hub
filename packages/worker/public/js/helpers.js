@@ -55,7 +55,13 @@ function money(n) {
   return "$" + n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function isoDate(d) { return d.toISOString().slice(0, 10); }
+// Local calendar date (not UTC): ccusage reports rows by local date, and
+// toISOString() would lag a day behind for users east of UTC.
+function isoDate(d) {
+  var mm = String(d.getMonth() + 1).padStart(2, "0");
+  var dd = String(d.getDate()).padStart(2, "0");
+  return d.getFullYear() + "-" + mm + "-" + dd;
+}
 function rangeDates() {
   var to = new Date();
   var from = new Date();

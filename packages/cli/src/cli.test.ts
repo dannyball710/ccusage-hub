@@ -14,11 +14,13 @@ interface CliResult {
   stderr: string;
 }
 
-function runCli(args: string[], configPath: string): CliResult {
+function runCli(args: string[], configPath: string, input = ""): CliResult {
+  // The timeout doubles as a runaway guard for prompt-loop regressions.
   const res = spawnSync(process.execPath, [DIST, ...args], {
     encoding: "utf8",
     windowsHide: true,
     timeout: 30_000,
+    input,
     env: { ...process.env, CCUSAGE_HUB_CONFIG: configPath },
   });
   return { status: res.status, stdout: res.stdout, stderr: res.stderr };
@@ -79,6 +81,29 @@ describe("cli exit codes", () => {
     expect(res.status).toBe(1);
     expect(res.stderr).toContain('invalid --editor "bogus"');
     expect(res.stderr).toContain("claude|codex|gemini|copilot|none");
+  });
+
+  // A closed stdin (EOF) must abort prompting with exit 1 — not busy-spin
+  // re-printing the prompt forever.
+  it("init with immediately-closed stdin exits 1 without runaway output", () => {
+    const res = runCli(["init"], join(tmpDir, "config.json"), "");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("stdin closed");
+    expect(res.stdout.length).toBeLessThan(1000);
+  });
+
+  it("init hitting EOF between prompts exits 1", () => {
+    const res = runCli(["init"], join(tmpDir, "config.json"), "http://localhost:9\n");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("stdin closed");
+  });
+
+  it("init answers all prompts via piped stdin and exits 0", () => {
+    const configPath = join(tmpDir, "config.json");
+    const res = runCli(["init"], configPath, "http://localhost:9\nccu_t\nbox\nnone\n");
+    expect(res.status).toBe(0);
+    expect(res.stdout).toContain(`Config written to ${configPath}`);
+    expect(res.stdout).toContain("No hook installed");
   });
 
   it("init --yes without --endpoint exits 1", () => {

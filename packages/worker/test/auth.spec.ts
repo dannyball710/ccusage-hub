@@ -75,10 +75,14 @@ describe("session auth", () => {
     expect((await call("/api/keys", {}, `ses_${"0".repeat(64)}`)).status).toBe(401);
   });
 
-  it("rejects an expired session", async () => {
+  it("rejects an expired session and prunes its row", async () => {
     const session = await setupAdmin();
     await env.DB.prepare("UPDATE sessions SET expires_at = ?").bind("2000-01-01T00:00:00.000Z").run();
     expect((await call("/api/stats", {}, session)).status).toBe(401);
+    // The 401 also deletes the expired row (via waitUntil) so the sessions
+    // table doesn't grow unboundedly.
+    const left = await env.DB.prepare("SELECT COUNT(*) AS n FROM sessions").first<{ n: number }>();
+    expect(left?.n).toBe(0);
   });
 });
 

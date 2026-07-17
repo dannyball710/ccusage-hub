@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { apiKeyAuth } from "../auth";
-import { DATE_RE, type AppEnv } from "../types";
+import { isValidDateStr, type AppEnv } from "../types";
 
 const USAGE_BATCH_SIZE = 100; // rows per D1 batch(); caps bound params per call
 
@@ -31,11 +31,17 @@ function checkUsageRow(v: unknown, i: number): RowCheck {
   if (!("agent" in v) || typeof v.agent !== "string" || v.agent.length === 0) {
     return { ok: false, error: `row ${i}: agent must be a non-empty string` };
   }
-  if (!("date" in v) || typeof v.date !== "string" || !DATE_RE.test(v.date)) {
+  if (v.agent.length > 200) {
+    return { ok: false, error: `row ${i}: agent too long (max 200)` };
+  }
+  if (!("date" in v) || typeof v.date !== "string" || !isValidDateStr(v.date)) {
     return { ok: false, error: `row ${i}: date must be YYYY-MM-DD` };
   }
   if (!("model" in v) || typeof v.model !== "string" || v.model.length === 0) {
     return { ok: false, error: `row ${i}: model must be a non-empty string` };
+  }
+  if (v.model.length > 200) {
+    return { ok: false, error: `row ${i}: model too long (max 200)` };
   }
   if (
     !("inputTokens" in v) ||
@@ -82,6 +88,9 @@ usageRoutes.post("/api/usage", apiKeyAuth, async (c) => {
   }
   if (!("machine" in body) || typeof body.machine !== "string" || body.machine.length === 0) {
     return c.json({ ok: false, error: "machine must be a non-empty string" }, 400);
+  }
+  if (body.machine.length > 200) {
+    return c.json({ ok: false, error: "machine too long (max 200)" }, 400);
   }
   if (!("rows" in body) || !Array.isArray(body.rows)) {
     return c.json({ ok: false, error: "rows must be an array" }, 400);
@@ -143,7 +152,8 @@ usageRoutes.post("/api/usage", apiKeyAuth, async (c) => {
       await c.env.DB.batch(chunk);
       upserted += chunk.length;
     }
-  } catch {
+  } catch (err) {
+    console.error(err); // keep the real error visible in Workers logs / wrangler tail
     return c.json({ ok: false, error: "database error during upsert" }, 500);
   }
   return c.json({ ok: true, upserted });

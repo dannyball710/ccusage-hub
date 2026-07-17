@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { sessionAuth } from "../auth";
-import { DATE_RE, METRIC_COLUMNS, type AppEnv } from "../types";
+import { isValidDateStr, METRIC_COLUMNS, type AppEnv } from "../types";
 
 type GroupBy = "machine" | "agent" | "model";
 
@@ -28,8 +28,8 @@ statsRoutes.get("/api/stats", sessionAuth, async (c) => {
 
   const fromParam = c.req.query("from");
   const toParam = c.req.query("to");
-  const from = fromParam && DATE_RE.test(fromParam) ? fromParam : defaultFrom;
-  const to = toParam && DATE_RE.test(toParam) ? toParam : defaultTo;
+  const from = fromParam && isValidDateStr(fromParam) ? fromParam : defaultFrom;
+  const to = toParam && isValidDateStr(toParam) ? toParam : defaultTo;
 
   // Unknown groupBy falls back to the default dimension (machine).
   const groupByParam = c.req.query("groupBy") ?? "machine";

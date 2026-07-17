@@ -68,6 +68,13 @@ export const sessionAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
     .bind(tokenHash)
     .first<{ expires_at: string }>();
   if (!row || Date.parse(row.expires_at) <= Date.now()) {
+    if (row) {
+      // Fire-and-forget: prune the expired row so the sessions table doesn't
+      // grow unboundedly.
+      c.executionCtx.waitUntil(
+        c.env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(tokenHash).run()
+      );
+    }
     return c.json({ ok: false, error: "unauthorized" }, 401);
   }
   c.set("sessionTokenHash", tokenHash);

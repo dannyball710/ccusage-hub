@@ -114,6 +114,15 @@ describe("GET /api/stats", () => {
     });
   });
 
+  it("falls back to the default range for impossible calendar dates in from/to", async () => {
+    const session = await seed();
+    // 2026-13-99 passes a naive regex but is not a real date; it must not be
+    // used verbatim in the query.
+    const bogus = await json(await call("/api/stats?from=2026-02-30&to=2026-13-99", {}, session));
+    const dflt = await json(await call("/api/stats", {}, session));
+    expect(bogus).toEqual(dflt);
+  });
+
   it("defaults to the last 30 days when no range is given", async () => {
     const session = await setupAdmin();
     const { key } = await createKey(session);

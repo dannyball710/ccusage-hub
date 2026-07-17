@@ -63,7 +63,8 @@ Request body:
 }
 ```
 
-Constraints: `machine` non-empty string; `rows` max 2000; `date` is `YYYY-MM-DD`.
+Constraints: `machine`, `agent`, `model` non-empty strings (max 200 chars); `rows` max 2000;
+`date` is `YYYY-MM-DD` and must be a real calendar date (leap years respected).
 
 Response: `200 {"ok": true, "upserted": <n>}` | `400 {"ok": false, "error": "..."}` | `401`.
 
@@ -71,6 +72,7 @@ Response: `200 {"ok": true, "upserted": <n>}` | `400 {"ok": false, "error": "...
 
 Aggregated stats for charts. Always grouped by `(date, <groupBy dimension>)`.
 Default range: last 30 days. Default groupBy: `machine`.
+Invalid `from`/`to` values (wrong format or impossible calendar dates) fall back to the defaults.
 
 Response:
 
