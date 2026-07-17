@@ -1,33 +1,28 @@
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
+import { isDailyJson, parseDailyJson, type DailyJson, type UsageRow } from "./daily.js";
+import { errnoCode } from "./errors.js";
 
-export interface UsageRow {
-  agent: string;
-  date: string;
-  model: string;
-  inputTokens: number;
-  outputTokens: number;
-  cacheCreationTokens: number;
-  cacheReadTokens: number;
-  costUsd: number;
+export type { UsageRow } from "./daily.js";
+
+interface BinMap {
+  [name: string]: string;
 }
 
-interface DailyJson {
-  daily?: Array<{
-    period?: string;
-    agents?: Array<{
-      agent?: string;
-      modelBreakdowns?: Array<{
-        modelName?: string;
-        inputTokens?: number;
-        outputTokens?: number;
-        cacheCreationTokens?: number;
-        cacheReadTokens?: number;
-        cost?: number;
-      }>;
-    }>;
-  }>;
+function isBinMap(v: unknown): v is BinMap {
+  if (typeof v !== "object" || v === null || Array.isArray(v)) return false;
+  const values: unknown[] = Object.values(v);
+  return values.every((x) => typeof x === "string");
+}
+
+// package.json "bin" is either a single path or a name-to-path map.
+function packageBin(pkg: unknown): string | undefined {
+  if (typeof pkg !== "object" || pkg === null || !("bin" in pkg)) return undefined;
+  const bin = pkg.bin;
+  if (typeof bin === "string") return bin;
+  if (!isBinMap(bin)) return undefined;
+  return bin["ccusage"] ?? Object.values(bin)[0];
 }
 
 // Resolve the bundled ccusage cli.js without relying on shell shims.
@@ -35,16 +30,10 @@ function resolveCcusageCli(): string {
   const req = createRequire(__filename);
   const pkgPath = req.resolve("ccusage/package.json");
   const pkgDir = dirname(pkgPath);
-  const pkg = req("ccusage/package.json") as { bin?: string | Record<string, string> };
-  let binRel: string | undefined;
-  if (typeof pkg.bin === "string") binRel = pkg.bin;
-  else if (pkg.bin) binRel = pkg.bin.ccusage ?? Object.values(pkg.bin)[0];
+  const pkg: unknown = req("ccusage/package.json");
+  const binRel = packageBin(pkg);
   if (!binRel) throw new Error("Cannot locate ccusage bin in its package.json");
   return join(pkgDir, binRel);
-}
-
-function num(v: unknown): number {
-  return typeof v === "number" && Number.isFinite(v) ? v : 0;
 }
 
 function sinceDate(sinceDays: number): string {
@@ -69,13 +58,16 @@ function runCcusage(
     timeout: 60_000,
     maxBuffer: 64 * 1024 * 1024,
   });
-  const timedOut = (res.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT";
+  const timedOut = errnoCode(res.error) === "ETIMEDOUT";
   if (res.status !== 0 || !res.stdout) return { ok: false, timedOut };
+  let parsed: unknown;
   try {
-    return { ok: true, json: JSON.parse(res.stdout) as DailyJson };
+    parsed = JSON.parse(res.stdout);
   } catch {
     return { ok: false };
   }
+  if (!isDailyJson(parsed)) return { ok: false };
+  return { ok: true, json: parsed };
 }
 
 export function collect(sinceDays = 7): UsageRow[] {
@@ -92,27 +84,5 @@ export function collect(sinceDays = 7): UsageRow[] {
     );
   }
 
-  const rows: UsageRow[] = [];
-  for (const day of out.json.daily ?? []) {
-    const date = day.period;
-    if (!date) continue;
-    for (const a of day.agents ?? []) {
-      const agent = a.agent;
-      if (!agent) continue;
-      for (const b of a.modelBreakdowns ?? []) {
-        if (!b.modelName) continue;
-        rows.push({
-          agent,
-          date,
-          model: b.modelName,
-          inputTokens: num(b.inputTokens),
-          outputTokens: num(b.outputTokens),
-          cacheCreationTokens: num(b.cacheCreationTokens),
-          cacheReadTokens: num(b.cacheReadTokens),
-          costUsd: num(b.cost),
-        });
-      }
-    }
-  }
-  return rows;
+  return parseDailyJson(out.json);
 }

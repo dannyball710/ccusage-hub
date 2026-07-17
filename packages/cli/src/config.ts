@@ -9,6 +9,19 @@ export interface Config {
   sinceDays?: number;
 }
 
+function isConfig(v: unknown): v is Config {
+  if (typeof v !== "object" || v === null) return false;
+  if (!("endpoint" in v) || typeof v.endpoint !== "string" || !v.endpoint) return false;
+  if (!("token" in v) || typeof v.token !== "string" || !v.token) return false;
+  if ("machineName" in v && v.machineName !== undefined && typeof v.machineName !== "string") {
+    return false;
+  }
+  if ("sinceDays" in v && v.sinceDays !== undefined && typeof v.sinceDays !== "number") {
+    return false;
+  }
+  return true;
+}
+
 // CCUSAGE_HUB_CONFIG overrides the config path (used for testing).
 export function configPath(): string {
   return process.env.CCUSAGE_HUB_CONFIG || join(os.homedir(), ".ccusage-hub.json");
@@ -17,15 +30,8 @@ export function configPath(): string {
 export function loadConfig(): Config | null {
   try {
     const raw = readFileSync(configPath(), "utf8");
-    const cfg = JSON.parse(raw.replace(/^\uFEFF/, "")) as unknown;
-    if (typeof cfg !== "object" || cfg === null) return null;
-    const c = cfg as Record<string, unknown>;
-    const { endpoint, token, machineName, sinceDays } = c;
-    if (typeof endpoint !== "string" || !endpoint) return null;
-    if (typeof token !== "string" || !token) return null;
-    if (machineName !== undefined && typeof machineName !== "string") return null;
-    if (sinceDays !== undefined && typeof sinceDays !== "number") return null;
-    return { endpoint, token, machineName, sinceDays };
+    const cfg: unknown = JSON.parse(raw.replace(/^\uFEFF/, ""));
+    return isConfig(cfg) ? cfg : null;
   } catch {
     return null;
   }

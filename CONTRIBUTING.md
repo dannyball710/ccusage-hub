@@ -9,7 +9,25 @@ Requirements: Node.js >= 18, [pnpm](https://pnpm.io) (the repo pins the version 
 ```sh
 pnpm install
 pnpm -r build          # typecheck worker + bundle CLI
+pnpm -r test           # unit tests: CLI (vitest) + worker (vitest-pool-workers on real workerd + D1)
 ```
+
+## Code layout and rules
+
+- Every source file stays **under 200 lines** — split by function, not by size, when you approach the limit.
+- Strict typing: no `any`, no `Record<...>` property-bag casts, no `as` assertions. External data (JSON.parse, request bodies, ccusage output) is validated with type-predicate functions (`function isX(v: unknown): v is X`).
+- `packages/cli/src/`: `index.ts` (help + dispatch), `args.ts`, `commands/`, `platforms.ts` (editor hook registry), `daily.ts` (ccusage JSON validation/flattening), `collect.ts`, `upload.ts`, `config.ts`, `errors.ts`.
+- `packages/worker/src/`: `index.ts` (app wiring), `types.ts`, `crypto.ts`, `auth.ts`, `routes/` (auth, keys, usage, stats).
+- `packages/worker/public/`: `index.html` (markup only), `styles.css`, `js/` (classic scripts loaded in order; `app.js` boots last).
+
+## Adding support for another editor/platform
+
+Hook installation is abstracted behind the platform registry in `packages/cli/src/platforms.ts`:
+
+1. Add an entry to `PLATFORMS` with an `id` (the `--editor` value) and `label`. If the tool has a hook mechanism, implement `installHook(settingsPath?)` — it must be idempotent, must merge with (never clobber) existing user settings, and must abort on malformed files.
+2. `--editor` validation, the help text, and the interactive prompt all derive from the registry — no other CLI change needed.
+3. Add unit tests next to `platforms.test.ts` (fresh install, idempotent re-run, existing settings preserved, malformed file aborts).
+4. Update the editor `<select>` and hint text in the dashboard command generator (`packages/worker/public/js/init-command.js` and `index.html`).
 
 ### Worker + dashboard
 

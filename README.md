@@ -99,6 +99,7 @@ Log in with the admin password. Charts: daily cost stacked by machine/agent/mode
 ```sh
 pnpm install
 pnpm -r build
+pnpm -r test           # CLI unit tests + worker tests on real workerd + D1
 pnpm dev:worker        # wrangler dev on :8787 with local D1
 ```
 

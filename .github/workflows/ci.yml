@@ -27,5 +27,7 @@ jobs:
 
       - run: pnpm -r build
 
+      - run: pnpm -r test
+
       - name: CLI smoke test
         run: node packages/cli/dist/index.cjs --help

@@ -5,6 +5,15 @@ export interface UploadResult {
   upserted?: number;
 }
 
+function isUploadResult(v: unknown): v is UploadResult {
+  if (typeof v !== "object" || v === null) return false;
+  if (!("ok" in v) || typeof v.ok !== "boolean") return false;
+  if ("upserted" in v && v.upserted !== undefined && typeof v.upserted !== "number") {
+    return false;
+  }
+  return true;
+}
+
 // Worker rejects payloads over 2000 rows; split larger uploads into batches.
 const MAX_ROWS_PER_BATCH = 2000;
 
@@ -33,14 +42,10 @@ async function postBatch(
   } catch {
     throw new Error("unexpected response from server");
   }
-  if (typeof parsed !== "object" || parsed === null) {
+  if (!isUploadResult(parsed)) {
     throw new Error("unexpected response from server");
   }
-  const { ok, upserted } = parsed as Record<string, unknown>;
-  if (typeof ok !== "boolean" || (upserted !== undefined && typeof upserted !== "number")) {
-    throw new Error("unexpected response from server");
-  }
-  return { ok, upserted };
+  return { ok: parsed.ok, upserted: parsed.upserted };
 }
 
 export async function upload(
