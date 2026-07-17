@@ -1,5 +1,8 @@
 packages:
   - packages/*
+# tsup pins esbuild ^0.27 which has a low-severity advisory; force the fixed line.
+overrides:
+  "tsup>esbuild": ^0.28.1
 allowBuilds:
   esbuild: true
   sharp: true
