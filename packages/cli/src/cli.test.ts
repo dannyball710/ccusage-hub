@@ -1,30 +1,9 @@
-import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-// End-to-end exit-code tests against the bundled CLI (built by the test script).
-const DIST = fileURLToPath(new URL("../dist/index.cjs", import.meta.url));
-
-interface CliResult {
-  status: number | null;
-  stdout: string;
-  stderr: string;
-}
-
-function runCli(args: string[], configPath: string, input = ""): CliResult {
-  // The timeout doubles as a runaway guard for prompt-loop regressions.
-  const res = spawnSync(process.execPath, [DIST, ...args], {
-    encoding: "utf8",
-    windowsHide: true,
-    timeout: 30_000,
-    input,
-    env: { ...process.env, CCUSAGE_HUB_CONFIG: configPath },
-  });
-  return { status: res.status, stdout: res.stdout, stderr: res.stderr };
-}
+import { runCli } from "./cli-test-utils.js";
+import { EDITOR_IDS } from "./platforms/index.js";
 
 let tmpDir: string;
 
@@ -41,7 +20,9 @@ describe("cli exit codes", () => {
     const res = runCli(["--help"], join(tmpDir, "none.json"));
     expect(res.status).toBe(0);
     expect(res.stdout).toContain("Usage:");
-    expect(res.stdout).toContain("claude|codex|gemini|copilot|none");
+    // Generated from the platform registry, so a newly registered agent must
+    // show up here without anyone editing the help text.
+    for (const id of EDITOR_IDS) expect(res.stdout).toContain(id);
   });
 
   it("unknown command exits 1 with help on stderr", () => {
@@ -80,7 +61,7 @@ describe("cli exit codes", () => {
     );
     expect(res.status).toBe(1);
     expect(res.stderr).toContain('invalid --editor "bogus"');
-    expect(res.stderr).toContain("claude|codex|gemini|copilot|none");
+    for (const id of EDITOR_IDS) expect(res.stderr).toContain(id);
   });
 
   // A closed stdin (EOF) must abort prompting with exit 1 — not busy-spin
@@ -129,14 +110,39 @@ describe("cli exit codes", () => {
     expect(local.status).toBe(0);
   });
 
-  it("init --editor codex --yes writes config, installs no hook, exits 0", () => {
+  // Every registered agent now installs a hook, so "no hook installed" is only
+  // reachable via `none`. This case must never name a real agent: without
+  // --settings-path an installer writes to the developer's own config home.
+  it("init --editor none --yes writes config, installs no hook, exits 0", () => {
     const configPath = join(tmpDir, "config.json");
     const res = runCli(
-      ["init", "--endpoint", "http://localhost:9", "--key", "ccu_t", "--editor", "codex", "--yes"],
+      ["init", "--endpoint", "http://localhost:9", "--key", "ccu_t", "--editor", "none", "--yes"],
       configPath,
     );
     expect(res.status).toBe(0);
     expect(res.stdout).toContain(`Config written to ${configPath}`);
+    expect(res.stdout).toContain("No hook installed");
+  });
+
+  // --no-hook is the other way to opt out, and must work for a real agent id
+  // without touching that agent's config.
+  it("init --no-hook does not install for a hook-capable editor", () => {
+    const configPath = join(tmpDir, "config.json");
+    const res = runCli(
+      [
+        "init",
+        "--endpoint",
+        "http://localhost:9",
+        "--key",
+        "ccu_t",
+        "--editor",
+        "codex",
+        "--no-hook",
+        "--yes",
+      ],
+      configPath,
+    );
+    expect(res.status).toBe(0);
     expect(res.stdout).toContain("No hook installed");
   });
 

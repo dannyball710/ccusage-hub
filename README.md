@@ -48,8 +48,9 @@ In the dashboard: **Keys → create an API key**. The command generator produces
 npx -y ccusage-hub@latest init --endpoint https://<your-worker-url> --key ccu_xxx --machine my-desktop --editor claude --yes
 ```
 
-- `--editor claude` installs the Claude Code `SessionEnd` hook into `~/.claude/settings.json` (merged, existing hooks preserved).
-- Other editors (`codex|gemini|copilot|none`) write config only — run `sync` manually or via your own trigger. Uploads always cover **all** agents' data regardless of which editor triggered them, because ccusage scans everything.
+- `--editor <id>` installs that agent's hook. Agents with a hook config get an entry merged into it, with your existing hooks preserved; agents that load plugins instead get a single `ccusage-hub-sync` plugin file dropped into their own plugin directory. Run `ccusage-hub help` for the current list — it is generated from the platform registry.
+- Agents whose only end-of-work event fires per turn (rather than once per session) get a throttled hook, so the sync runs at most once every few minutes no matter how many turns you take.
+- `--editor none` (or `--no-hook`) writes config only — run `sync` manually or via your own trigger. Uploads always cover **all** agents' data regardless of which editor triggered them, because ccusage scans everything.
 - `--machine` is optional; the hostname is used as a fallback, resolved at sync time.
 - Interactive mode also works: `npx -y ccusage-hub@latest init`.
 
@@ -58,17 +59,17 @@ That's it. Every Claude Code session end now syncs the last 7 days of usage from
 ## CLI reference
 
 ```
-ccusage-hub sync [--quiet] [--since-days N] [--dry-run]
+ccusage-hub sync [--quiet] [--since-days N] [--dry-run] [--min-interval S]
 ccusage-hub init [--endpoint <url>] [--key <ccu_...>] [--machine <name>]
-                   [--editor <claude|codex|gemini|copilot|none>] [--yes]
+                   [--editor <id>] [--yes]
 ccusage-hub status
 ccusage-hub help
 ```
 
 | Command | Description |
 | --- | --- |
-| `sync` | Collect usage via ccusage and upload. `--dry-run` prints rows without uploading; `--quiet` is hook mode (never fails the session). |
-| `init` | Write `~/.ccusage-hub.json` and optionally install the Claude Code hook. |
+| `sync` | Collect usage via ccusage and upload. `--dry-run` prints rows without uploading; `--quiet` is hook mode (never fails the session); `--min-interval S` exits 0 without scanning if the last successful sync was under S seconds ago. |
+| `init` | Write `~/.ccusage-hub.json` and, for agents that support it, install that agent's session-end hook. |
 | `status` | Print config and check Worker health. |
 
 Config file (`~/.ccusage-hub.json`):
@@ -83,6 +84,14 @@ Config file (`~/.ccusage-hub.json`):
 ```
 
 `machineName` and `sinceDays` are optional. `CCUSAGE_HUB_CONFIG` overrides the config path.
+
+`--min-interval` records the last successful sync in a state file beside the config (`~/.ccusage-hub.state.json`). A missing or corrupt state file simply means "sync now" — it is never an error.
+
+Installing a hook never rewrites your agent's config in place: ccusage-hub backs the file up to `<name>.ccusage-hub-bak`, writes atomically, then re-reads and re-parses the result to confirm the hook is present and none of your other settings were lost — restoring the original if anything went wrong.
+
+For agents that load plugins (OpenCode, Kilo, pi, Amp, OpenClaw), nothing of yours is edited at all: ccusage-hub writes one `ccusage-hub-sync` file into that agent's plugin directory and leaves your own plugins alone. Deleting that file uninstalls the hook. The plugin starts the sync as a detached background process and never waits for it, so it cannot slow down or block the agent. Amp needs a `plugins: reload` (or a restart) to pick it up.
+
+OpenClaw is the one agent that also needs its hook registered, which ccusage-hub does via OpenClaw's own CLI rather than editing your JSON5 config. If you have deliberately set `hooks.internal.enabled` to `false`, ccusage-hub will **not** override that — it writes the files, leaves the setting alone, and prints the command to run if you want it on.
 
 ## Dashboard
 

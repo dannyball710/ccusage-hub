@@ -140,12 +140,29 @@
               </div>
               <div class="field" style="margin: 0">
                 <label class="form-label" for="gen-editor">Editor</label>
+                <!-- Ids and labels mirror packages/cli/src/platforms; a platform
+                     is hook-capable there iff it defines installHook. -->
                 <select id="gen-editor" class="text">
-                  <option value="claude">Claude Code</option>
-                  <option value="codex">Codex</option>
-                  <option value="gemini">Gemini CLI</option>
-                  <option value="copilot">Copilot CLI</option>
-                  <option value="none">None (manual sync)</option>
+                  <optgroup label="Installs a hook">
+                    <option value="claude">Claude Code</option>
+                    <option value="codex">Codex</option>
+                    <option value="opencode">OpenCode</option>
+                    <option value="amp">Amp</option>
+                    <option value="droid">Droid</option>
+                    <option value="hermes">Hermes</option>
+                    <option value="pi">pi-agent</option>
+                    <option value="goose">Goose</option>
+                    <option value="kilo">Kilo</option>
+                    <option value="copilot">GitHub Copilot CLI</option>
+                    <option value="gemini">Gemini CLI</option>
+                    <option value="kimi">Kimi</option>
+                    <option value="qwen">Qwen</option>
+                    <option value="openclaw">OpenClaw</option>
+                  </optgroup>
+                  <optgroup label="Config only">
+                    <option value="codebuff">Codebuff</option>
+                    <option value="none">None (manual sync)</option>
+                  </optgroup>
                 </select>
               </div>
             </div>

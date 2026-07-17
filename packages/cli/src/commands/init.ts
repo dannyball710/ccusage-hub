@@ -5,7 +5,10 @@ import type { Flags } from "../args.js";
 import { configPath, type Config } from "../config.js";
 import { endpointError } from "../endpoint.js";
 import { errorMessage } from "../errors.js";
-import { EDITOR_IDS, getPlatform } from "../platforms.js";
+import { EDITOR_IDS, getPlatform } from "../platforms/index.js";
+import { wrapIds } from "../wrap.js";
+
+const EDITOR_LIST = wrapIds(EDITOR_IDS, "  ");
 
 export async function cmdInit(flags: Flags): Promise<number> {
   const yes = flags.bool.has("yes");
@@ -13,7 +16,7 @@ export async function cmdInit(flags: Flags): Promise<number> {
   let editor = flags.value.get("editor")?.toLowerCase();
   if (editor !== undefined && !EDITOR_IDS.includes(editor)) {
     process.stderr.write(
-      `ccusage-hub: invalid --editor "${editor}" (expected ${EDITOR_IDS.join("|")})\n`,
+      `ccusage-hub: invalid --editor "${editor}". Expected one of:\n  ${EDITOR_LIST}\n`,
     );
     return 1;
   }
@@ -87,8 +90,9 @@ export async function cmdInit(flags: Flags): Promise<number> {
 
     // Editor defaults to claude; prompt for it interactively when not provided.
     if (editor === undefined && !yes) {
+      process.stdout.write(`Editors:\n  ${EDITOR_LIST}\n`);
       while (true) {
-        const raw = await ask(`Editor (${EDITOR_IDS.join("|")}) [claude]: `);
+        const raw = await ask("Editor [claude]: ");
         if (raw === null) return promptEof();
         const ans = raw.trim().toLowerCase();
         if (!ans) break; // keep default (claude)
@@ -96,7 +100,7 @@ export async function cmdInit(flags: Flags): Promise<number> {
           editor = ans;
           break;
         }
-        process.stdout.write(`  Expected ${EDITOR_IDS.join("|")}.\n`);
+        process.stdout.write(`  Expected one of:\n  ${EDITOR_LIST}\n`);
       }
     }
     const effectiveEditor = editor ?? "claude";
@@ -126,7 +130,7 @@ export async function cmdInit(flags: Flags): Promise<number> {
     } else {
       process.stdout.write(
         "No hook installed; this machine syncs when you run 'ccusage-hub sync' manually " +
-          "(or via another machine's Claude Code hook if home is shared).\n",
+          "(or via another machine's hook if home is shared).\n",
       );
     }
     return 0;

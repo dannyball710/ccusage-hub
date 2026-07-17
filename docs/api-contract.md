@@ -157,13 +157,20 @@ CREATE TABLE IF NOT EXISTS sessions (
 ## CLI init (non-interactive) — for the dashboard command generator
 
 ```
-npx -y ccusage-hub@latest init --endpoint <workerUrl> --key <ccu_...> [--machine <name>] --editor <claude|codex|gemini|copilot|none> --yes
+npx -y ccusage-hub@latest init --endpoint <workerUrl> --key <ccu_...> [--machine <name>] --editor <id> --yes
 ```
 
 - `--yes`: no prompts; missing `--machine` → hostname fallback at sync time.
-- `--editor claude`: installs the Claude Code SessionEnd hook into `~/.claude/settings.json`.
-- any other `--editor` value: writes config only, no hook (upload still covers ALL agents'
-  data because ccusage scans everything; those machines sync via Claude Code trigger or manual `sync`).
+- `--editor <id>`: one of the agents ccusage supports, or `none`. Run `ccusage-hub help`
+  for the authoritative list — it is generated from the platform registry.
+- Any agent id: installs that agent's hook into its own config, or drops a single
+  `ccusage-hub-sync` plugin file into its own plugin directory, preserving whatever
+  the user already had there. OpenClaw additionally self-registers via its own CLI,
+  but never overrides a user who has explicitly disabled internal hooks.
+- Agents whose only end-of-work event is per-turn get a hook command carrying
+  `--min-interval`, so repeated turns cost at most one ccusage scan per window.
+- `none` (or `--no-hook`): writes config only (upload still covers ALL agents'
+  data because ccusage scans everything; those machines sync via another agent's hook or manual `sync`).
 - The dashboard generates this command after creating an API key (key visible only at that moment).
 
 ## ccusage source format (v20, verified locally)

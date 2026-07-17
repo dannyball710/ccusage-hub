@@ -22,14 +22,21 @@ function buildInitCommand(key, machine, editor) {
   return cmd;
 }
 
+// Editors whose init installs an auto-sync hook. Mirrors packages/cli/src/platforms:
+// a platform there is hook-capable iff it defines installHook. Every other id in the
+// registry (and "none") writes config only.
+var HOOK_EDITORS = [
+  "claude", "codex", "opencode", "amp", "droid", "hermes", "pi",
+  "goose", "kilo", "copilot", "gemini", "kimi", "qwen", "openclaw",
+];
+
 function updateEditorNote(editor) {
-  // Only the claude editor installs the auto-sync hook; flag the others.
   var note = $("gen-note");
-  if (editor === "claude") {
-    note.classList.add("hidden");
-    note.textContent = "";
+  note.classList.remove("hidden");
+  if (HOOK_EDITORS.indexOf(editor) !== -1) {
+    note.textContent =
+      "init installs an auto-sync hook into this editor's own config, so each session uploads on its own.";
   } else {
-    note.classList.remove("hidden");
     note.textContent =
       "No auto-sync hook is installed for this editor — run ccusage-hub sync on that machine (or rely on another machine's Claude Code hook if home is shared).";
   }
