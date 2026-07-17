@@ -79,9 +79,12 @@ npx wrangler dev
 
 The placeholder `database_id` in `wrangler.jsonc` is intentional — it keeps local D1 commands working without a Cloudflare account.
 
-## Hardening (optional but recommended)
+## Hardening
+
+**Rate-limit the login endpoint (strongly recommended).** The Worker has no built-in rate limiting on `POST /api/login`. It sleeps ~200ms on a failed attempt, but that is wall-clock delay only — it does not serialize concurrent requests, so a parallel guesser is barely slowed, and every attempt burns Workers CPU you pay for. Add a Cloudflare rate-limiting rule (Security → WAF → Rate limiting rules) matching `http.request.uri.path eq "/api/login" and http.request.method eq "POST"`, e.g. 10 requests per minute per IP, action Block. Pick a strong admin password regardless.
+
+Also worth doing:
 
 - **Custom domain**: add a route or custom domain in the Cloudflare dashboard instead of the default `*.workers.dev` hostname.
-- **Rate-limit the login endpoint**: the Worker adds a delay on failed logins but has no built-in rate limiting. A Cloudflare WAF rate-limiting rule on `POST /api/login` closes that gap.
 - **Cloudflare Access**: for defense in depth, put the whole dashboard behind [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/policies/access/) (leave `POST /api/usage` reachable for uploaders, or use a service token).
-- **Key hygiene**: create one API key per machine so a lost machine can be revoked individually from the Keys page.
+- **Key hygiene**: create one API key per machine so a lost machine can be revoked individually from the Keys page. A leaked upload key cannot read your data, but it can overwrite it — see [SECURITY.md](../SECURITY.md).

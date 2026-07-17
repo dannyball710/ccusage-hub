@@ -90,6 +90,18 @@ describe("upload", () => {
     );
   });
 
+  // A hostile server must not be able to drive the terminal with escape
+  // sequences smuggled through the error message.
+  it("strips control characters from the error body", async () => {
+    const esc = String.fromCharCode(27);
+    responses.push(new Response(`${esc}[2J${esc}]0;pwned${String.fromCharCode(7)}boom`, {
+      status: 500,
+    }));
+    await expect(upload("https://w.example", "t", "m", makeRows(1))).rejects.toThrow(
+      "upload failed: 500 [2J]0;pwnedboom",
+    );
+  });
+
   it("throws on a non-JSON response", async () => {
     responses.push(new Response("<html>gateway error</html>"));
     await expect(upload("https://w.example", "t", "m", makeRows(1))).rejects.toThrow(

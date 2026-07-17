@@ -83,6 +83,22 @@ describe("loadConfig", () => {
     useConfig(JSON.stringify({ endpoint: "https://w.example", token: "ccu_x", sinceDays: "7" }));
     expect(loadConfig()).toBeNull();
   });
+
+  // A hand-edited config must not silently downgrade the token to cleartext
+  // http or smuggle in a diverging request target.
+  it("rejects a hand-edited endpoint that violates the endpoint rules", () => {
+    useConfig(JSON.stringify({ endpoint: "http://evil.example", token: "ccu_x" }));
+    expect(loadConfig()).toBeNull();
+    useConfig(JSON.stringify({ endpoint: "https://good.example@evil.example", token: "ccu_x" }));
+    expect(loadConfig()).toBeNull();
+    useConfig(JSON.stringify({ endpoint: "https://evil.example#", token: "ccu_x" }));
+    expect(loadConfig()).toBeNull();
+  });
+
+  it("accepts http for localhost (local dev)", () => {
+    useConfig(JSON.stringify({ endpoint: "http://localhost:8787", token: "ccu_x" }));
+    expect(loadConfig()).toMatchObject({ endpoint: "http://localhost:8787" });
+  });
 });
 
 describe("resolveMachine", () => {

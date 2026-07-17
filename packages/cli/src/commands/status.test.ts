@@ -47,34 +47,42 @@ describe("cmdStatus", () => {
   });
 
   it("prints config with a masked token and reports a reachable endpoint", async () => {
-    useConfig({ endpoint: "http://w.example/", token: "ccu_secret1234", machineName: "box" });
+    useConfig({ endpoint: "https://w.example/", token: "ccu_secret1234", machineName: "box" });
     expect(await cmdStatus()).toBe(0);
-    expect(out).toContain("Endpoint:  http://w.example");
+    expect(out).toContain("Endpoint:  https://w.example");
     // Only the last 4 characters of the token may be shown.
-    expect(out).toContain(`Token:     ${"*".repeat(10)}1234`);
+    expect(out).toContain("Token:     ****1234");
     expect(out).not.toContain("ccu_secret1234");
     expect(out).toContain("Machine:   box");
     expect(out).toContain("Health:    reachable (HTTP 200)");
     // Trailing slash on the endpoint must not double up in the health URL.
-    expect(fetchUrls).toEqual(["http://w.example/api/health"]);
+    expect(fetchUrls).toEqual(["https://w.example/api/health"]);
   });
 
-  it("masks short tokens entirely", async () => {
-    useConfig({ endpoint: "http://w.example", token: "abc" });
+  // The mask is fixed-width so it does not leak the token's length.
+  it("masks tokens of any length to the same width", async () => {
+    useConfig({ endpoint: "https://w.example", token: "ccu_a_much_longer_token_9876" });
     await cmdStatus();
-    expect(out).toContain("Token:     ***");
+    expect(out).toContain("Token:     ****9876");
+    expect(out).not.toContain("*********");
+  });
+
+  it("hides short tokens entirely", async () => {
+    useConfig({ endpoint: "https://w.example", token: "abc" });
+    await cmdStatus();
+    expect(out).toContain("Token:     ****\n");
     expect(out).not.toContain("abc");
   });
 
   it("exits 1 when the endpoint answers with an HTTP error", async () => {
-    useConfig({ endpoint: "http://w.example", token: "ccu_t" });
+    useConfig({ endpoint: "https://w.example", token: "ccu_t" });
     fetchResult = () => Promise.resolve(new Response("nope", { status: 500 }));
     expect(await cmdStatus()).toBe(1);
     expect(out).toContain("Health:    unreachable (HTTP 500)");
   });
 
   it("exits 1 when the endpoint is unreachable", async () => {
-    useConfig({ endpoint: "http://w.example", token: "ccu_t" });
+    useConfig({ endpoint: "https://w.example", token: "ccu_t" });
     fetchResult = () => Promise.reject(new Error("connect ECONNREFUSED"));
     expect(await cmdStatus()).toBe(1);
     expect(out).toContain("Health:    unreachable (connect ECONNREFUSED)");

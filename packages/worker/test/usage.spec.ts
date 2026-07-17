@@ -111,6 +111,54 @@ describe("POST /api/usage validation", () => {
     await expect400({ machine: "m".repeat(201), rows: [] }, "machine too long (max 200)");
   });
 
+  it("rejects identifiers with invalid characters", async () => {
+    const { key } = await adminAndKey();
+    const machineRes = await postJson("/api/usage", { machine: "<img src=x onerror=1>", rows: [] }, key);
+    expect(machineRes.status).toBe(400);
+    expect(await json(machineRes)).toEqual({ ok: false, error: "machine contains invalid characters" });
+    const agentRes = await postJson("/api/usage", { machine: "m", rows: [row({ agent: "a<b>" })] }, key);
+    expect(await json(agentRes)).toEqual({ ok: false, error: "row 0: agent contains invalid characters" });
+    const modelRes = await postJson("/api/usage", { machine: "m", rows: [row({ model: "x/y" })] }, key);
+    expect(await json(modelRes)).toEqual({ ok: false, error: "row 0: model contains invalid characters" });
+  });
+
+  // "__proto__" passes the charset allowlist (underscores are legal in device
+  // names) but as a grouping-map key in the dashboard it enables prototype
+  // pollution and forged per-machine stats, so reserved JS keys are rejected.
+  it("rejects __proto__ and other reserved JS keys as identifiers", async () => {
+    const { key } = await adminAndKey();
+    const machineRes = await postJson("/api/usage", { machine: "__proto__", rows: [] }, key);
+    expect(machineRes.status).toBe(400);
+    expect(await json(machineRes)).toEqual({ ok: false, error: "machine is a reserved name" });
+    const agentRes = await postJson("/api/usage", { machine: "m", rows: [row({ agent: "constructor" })] }, key);
+    expect(await json(agentRes)).toEqual({ ok: false, error: "row 0: agent is a reserved name" });
+  });
+
+  it("accepts a normal hostname-style machine name", async () => {
+    const { key } = await adminAndKey();
+    const res = await postJson("/api/usage", { machine: "my-desktop.local", rows: [row()] }, key);
+    expect(await json(res)).toEqual({ ok: true, upserted: 1 });
+  });
+
+  it("rejects numeric fields above MAX_SAFE_INTEGER", async () => {
+    const { key } = await adminAndKey();
+    const tokenRes = await postJson("/api/usage", { machine: "m", rows: [row({ inputTokens: 1e308 })] }, key);
+    expect(tokenRes.status).toBe(400);
+    expect(await json(tokenRes)).toEqual({ ok: false, error: "row 0: token fields must be non-negative numbers" });
+    const costRes = await postJson("/api/usage", { machine: "m", rows: [row({ costUsd: 1e308 })] }, key);
+    expect(await json(costRes)).toEqual({ ok: false, error: "row 0: costUsd must be a non-negative number" });
+  });
+
+  it("accepts token counts up to MAX_SAFE_INTEGER", async () => {
+    const { key } = await adminAndKey();
+    const res = await postJson(
+      "/api/usage",
+      { machine: "m", rows: [row({ inputTokens: Number.MAX_SAFE_INTEGER })] },
+      key
+    );
+    expect(await json(res)).toEqual({ ok: true, upserted: 1 });
+  });
+
   it("rejects agent and model longer than 200 chars", async () => {
     const { key } = await adminAndKey();
     const agentRes = await postJson("/api/usage", { machine: "m", rows: [row({ agent: "a".repeat(201) })] }, key);

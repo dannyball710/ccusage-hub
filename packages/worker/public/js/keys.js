@@ -14,6 +14,11 @@ function openKeys() {
 function closeKeys() {
   $("keys-overlay").classList.remove("show");
   $("keys-overlay").setAttribute("aria-hidden", "true");
+  // The key is promised "shown only once" — don't leave it sitting in the DOM.
+  $("key-reveal").classList.add("hidden");
+  $("reveal-key").textContent = "";
+  $("gen-command").textContent = "";
+  state.lastKey = null;
 }
 
 function loadKeys() {

@@ -84,6 +84,17 @@ describe("session auth", () => {
     const left = await env.DB.prepare("SELECT COUNT(*) AS n FROM sessions").first<{ n: number }>();
     expect(left?.n).toBe(0);
   });
+
+  // Only createSession writes expires_at, but if the value is ever corrupt,
+  // Date.parse yields NaN and a naive `NaN <= now` check would grant a session
+  // that never expires. Fail closed instead.
+  it("rejects a session with a corrupt expires_at", async () => {
+    const session = await setupAdmin();
+    await env.DB.prepare("UPDATE sessions SET expires_at = ?").bind("not-a-date").run();
+    expect((await call("/api/stats", {}, session)).status).toBe(401);
+    const left = await env.DB.prepare("SELECT COUNT(*) AS n FROM sessions").first<{ n: number }>();
+    expect(left?.n).toBe(0);
+  });
 });
 
 describe("corrupt admin_password record", () => {

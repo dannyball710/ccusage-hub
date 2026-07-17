@@ -67,14 +67,18 @@ export const sessionAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
   const row = await c.env.DB.prepare("SELECT expires_at FROM sessions WHERE token_hash = ?")
     .bind(tokenHash)
     .first<{ expires_at: string }>();
-  if (!row || Date.parse(row.expires_at) <= Date.now()) {
-    if (row) {
-      // Fire-and-forget: prune the expired row so the sessions table doesn't
-      // grow unboundedly.
-      c.executionCtx.waitUntil(
-        c.env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(tokenHash).run()
-      );
-    }
+  if (!row) {
+    return c.json({ ok: false, error: "unauthorized" }, 401);
+  }
+  // Fail closed: an unparseable expires_at (NaN) must count as expired, not
+  // as a session that never expires.
+  const exp = Date.parse(row.expires_at);
+  if (!Number.isFinite(exp) || exp <= Date.now()) {
+    // Fire-and-forget: prune the expired row so the sessions table doesn't
+    // grow unboundedly.
+    c.executionCtx.waitUntil(
+      c.env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(tokenHash).run()
+    );
     return c.json({ ok: false, error: "unauthorized" }, 401);
   }
   c.set("sessionTokenHash", tokenHash);

@@ -74,7 +74,9 @@ function rangeDates() {
 function colorMap(allKeys) {
   var sorted = allKeys.slice().sort();
   var t = theme();
-  var map = {};
+  // Null-prototyped: keys are upload-supplied, so "__proto__" must map to a color
+  // rather than reading through to Object.prototype.
+  var map = Object.create(null);
   sorted.forEach(function (k, i) {
     map[k] = i < t.series.length ? t.series[i] : t.other;
   });

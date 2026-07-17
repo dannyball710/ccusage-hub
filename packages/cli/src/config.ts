@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import os from "node:os";
 import { join } from "node:path";
+import { endpointError } from "./endpoint.js";
 
 export interface Config {
   endpoint: string;
@@ -11,7 +12,9 @@ export interface Config {
 
 function isConfig(v: unknown): v is Config {
   if (typeof v !== "object" || v === null) return false;
-  if (!("endpoint" in v) || typeof v.endpoint !== "string" || !v.endpoint) return false;
+  // A hand-edited endpoint must satisfy the same rules as one from init.
+  if (!("endpoint" in v) || typeof v.endpoint !== "string") return false;
+  if (endpointError(v.endpoint) !== null) return false;
   if (!("token" in v) || typeof v.token !== "string" || !v.token) return false;
   if ("machineName" in v && v.machineName !== undefined && typeof v.machineName !== "string") {
     return false;

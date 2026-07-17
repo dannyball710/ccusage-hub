@@ -112,6 +112,23 @@ describe("cli exit codes", () => {
     expect(res.stderr).toContain("missing or invalid --endpoint");
   });
 
+  // Remote http endpoints would ship the bearer token in cleartext on every
+  // unattended sync; only local-dev hosts may use http.
+  it("init rejects a remote http endpoint, accepts http on localhost", () => {
+    const rejected = runCli(
+      ["init", "--endpoint", "http://evil.example", "--key", "ccu_t", "--yes"],
+      join(tmpDir, "config.json"),
+    );
+    expect(rejected.status).toBe(1);
+    expect(rejected.stderr).toContain("https");
+
+    const local = runCli(
+      ["init", "--endpoint", "http://localhost:9", "--key", "ccu_t", "--editor", "none", "--yes"],
+      join(tmpDir, "config.json"),
+    );
+    expect(local.status).toBe(0);
+  });
+
   it("init --editor codex --yes writes config, installs no hook, exits 0", () => {
     const configPath = join(tmpDir, "config.json");
     const res = runCli(

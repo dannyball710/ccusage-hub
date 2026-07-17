@@ -5,7 +5,24 @@ import { isValidDateStr, type AppEnv } from "../types";
 const USAGE_BATCH_SIZE = 100; // rows per D1 batch(); caps bound params per call
 
 function isNonNegNumber(v: unknown): v is number {
-  return typeof v === "number" && Number.isFinite(v) && v >= 0;
+  // Bounded to MAX_SAFE_INTEGER so summed metrics can never reach Infinity
+  // (which `?? 0` in stats would silently turn into 0).
+  return typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= Number.MAX_SAFE_INTEGER;
+}
+
+// Allowlist matches the dashboard's device-name filter (init-command.js) and
+// the CLI's hostname-derived names.
+const IDENT_RE = /^[A-Za-z0-9._ -]+$/;
+// The charset above still admits these, and as object keys in a grouping map
+// they enable prototype pollution downstream — reject them outright.
+const RESERVED_IDENTS = ["__proto__", "constructor", "prototype"];
+
+// Returns the validation error suffix for a machine/agent/model value, or null.
+function identError(v: string): string | null {
+  if (v.length > 200) return "too long (max 200)";
+  if (!IDENT_RE.test(v)) return "contains invalid characters";
+  if (RESERVED_IDENTS.includes(v)) return "is a reserved name";
+  return null;
 }
 
 type UsageRow = {
@@ -31,8 +48,9 @@ function checkUsageRow(v: unknown, i: number): RowCheck {
   if (!("agent" in v) || typeof v.agent !== "string" || v.agent.length === 0) {
     return { ok: false, error: `row ${i}: agent must be a non-empty string` };
   }
-  if (v.agent.length > 200) {
-    return { ok: false, error: `row ${i}: agent too long (max 200)` };
+  const agentErr = identError(v.agent);
+  if (agentErr !== null) {
+    return { ok: false, error: `row ${i}: agent ${agentErr}` };
   }
   if (!("date" in v) || typeof v.date !== "string" || !isValidDateStr(v.date)) {
     return { ok: false, error: `row ${i}: date must be YYYY-MM-DD` };
@@ -40,8 +58,9 @@ function checkUsageRow(v: unknown, i: number): RowCheck {
   if (!("model" in v) || typeof v.model !== "string" || v.model.length === 0) {
     return { ok: false, error: `row ${i}: model must be a non-empty string` };
   }
-  if (v.model.length > 200) {
-    return { ok: false, error: `row ${i}: model too long (max 200)` };
+  const modelErr = identError(v.model);
+  if (modelErr !== null) {
+    return { ok: false, error: `row ${i}: model ${modelErr}` };
   }
   if (
     !("inputTokens" in v) ||
@@ -89,8 +108,9 @@ usageRoutes.post("/api/usage", apiKeyAuth, async (c) => {
   if (!("machine" in body) || typeof body.machine !== "string" || body.machine.length === 0) {
     return c.json({ ok: false, error: "machine must be a non-empty string" }, 400);
   }
-  if (body.machine.length > 200) {
-    return c.json({ ok: false, error: "machine too long (max 200)" }, 400);
+  const machineErr = identError(body.machine);
+  if (machineErr !== null) {
+    return c.json({ ok: false, error: `machine ${machineErr}` }, 400);
   }
   if (!("rows" in body) || !Array.isArray(body.rows)) {
     return c.json({ ok: false, error: "rows must be an array" }, 400);

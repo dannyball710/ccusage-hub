@@ -3,6 +3,7 @@ import os from "node:os";
 import { createInterface } from "node:readline";
 import type { Flags } from "../args.js";
 import { configPath, type Config } from "../config.js";
+import { endpointError } from "../endpoint.js";
 import { errorMessage } from "../errors.js";
 import { EDITOR_IDS, getPlatform } from "../platforms.js";
 
@@ -49,12 +50,14 @@ export async function cmdInit(flags: Flags): Promise<number> {
         const ans = await ask("Worker endpoint URL (https://...): ");
         if (ans === null) return promptEof();
         endpoint = ans.trim();
-        if (/^https?:\/\/.+/i.test(endpoint)) break;
-        process.stdout.write("  Please enter a valid http(s) URL.\n");
+        const problem = endpointError(endpoint);
+        if (problem === null) break;
+        process.stdout.write(`  ${problem}\n`);
       }
     }
-    if (!/^https?:\/\/.+/i.test(endpoint)) {
-      process.stderr.write("ccusage-hub: missing or invalid --endpoint\n");
+    const endpointProblem = endpointError(endpoint);
+    if (endpointProblem !== null) {
+      process.stderr.write(`ccusage-hub: missing or invalid --endpoint (${endpointProblem})\n`);
       return 1;
     }
     endpoint = endpoint.replace(/\/$/, "");

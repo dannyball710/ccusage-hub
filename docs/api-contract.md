@@ -63,8 +63,10 @@ Request body:
 }
 ```
 
-Constraints: `machine`, `agent`, `model` non-empty strings (max 200 chars); `rows` max 2000;
-`date` is `YYYY-MM-DD` and must be a real calendar date (leap years respected).
+Constraints: `machine`, `agent`, `model` non-empty strings, max 200 chars, charset
+`A-Z a-z 0-9 . _ space -`, reserved JS object keys (`__proto__`, `constructor`, `prototype`)
+rejected; `rows` max 2000; `date` is `YYYY-MM-DD` and must be a real calendar date (leap years
+respected); token fields and `costUsd` are numbers in `[0, Number.MAX_SAFE_INTEGER]`.
 
 Response: `200 {"ok": true, "upserted": <n>}` | `400 {"ok": false, "error": "..."}` | `401`.
 

@@ -32,12 +32,15 @@ function renderCostChart() {
   var t = theme();
   var rows = state.data.rows;
   var dates = uniqueSortedDates(rows);
-  var allKeys = Object.keys(rows.reduce(function (a, r) { a[r.key] = 1; return a; }, {}));
+  // Row keys are attacker-controllable (any upload key can send machine/agent/model
+  // names, including "__proto__"), so every object keyed by them is null-prototyped.
+  var allKeys = Object.keys(rows.reduce(function (a, r) { a[r.key] = 1; return a; }, Object.create(null)));
   var cmap = colorMap(allKeys);
 
-  var byKey = {};
+  var byKey = Object.create(null);
   rows.forEach(function (r) {
-    (byKey[r.key] = byKey[r.key] || {})[r.date] = (byKey[r.key][r.date] || 0) + (r.costUsd || 0);
+    if (!byKey[r.key]) byKey[r.key] = Object.create(null);
+    byKey[r.key][r.date] = (byKey[r.key][r.date] || 0) + (r.costUsd || 0);
   });
   var keys = allKeys.slice().sort();
 
@@ -150,9 +153,10 @@ function renderTokenChart() {
 function renderShareChart() {
   var t = theme();
   var rows = state.data.rows;
-  var allKeys = Object.keys(rows.reduce(function (a, r) { a[r.key] = 1; return a; }, {}));
+  // Null-prototyped for the same reason as renderCostChart: keys come from uploads.
+  var allKeys = Object.keys(rows.reduce(function (a, r) { a[r.key] = 1; return a; }, Object.create(null)));
   var cmap = colorMap(allKeys);
-  var totalByKey = {};
+  var totalByKey = Object.create(null);
   rows.forEach(function (r) { totalByKey[r.key] = (totalByKey[r.key] || 0) + (r.costUsd || 0); });
   var keys = allKeys.slice().sort();
   var values = keys.map(function (k) { return +totalByKey[k].toFixed(2); });

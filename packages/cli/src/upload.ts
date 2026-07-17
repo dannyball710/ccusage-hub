@@ -1,4 +1,5 @@
 import type { UsageRow } from "./collect.js";
+import { apiUrl } from "./endpoint.js";
 
 export interface UploadResult {
   ok: boolean;
@@ -23,7 +24,7 @@ async function postBatch(
   machine: string,
   rows: UsageRow[],
 ): Promise<UploadResult> {
-  const res = await fetch(`${endpoint.replace(/\/$/, "")}/api/usage`, {
+  const res = await fetch(apiUrl(endpoint, "/api/usage"), {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -34,7 +35,10 @@ async function postBatch(
   });
   const body = await res.text();
   if (!res.ok) {
-    throw new Error(`upload failed: ${res.status} ${body.slice(0, 200)}`);
+    // Strip control characters so a hostile server cannot inject terminal
+    // escape sequences via the error output.
+    const safeBody = body.replace(/[\x00-\x1F\x7F]/g, "").slice(0, 200);
+    throw new Error(`upload failed: ${res.status} ${safeBody}`);
   }
   let parsed: unknown;
   try {
