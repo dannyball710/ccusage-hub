@@ -71,6 +71,16 @@ function runCcusage(
 }
 
 export function collect(sinceDays = 7): UsageRow[] {
+  // Test seam: inject rows instead of spawning ccusage, so tests that exercise
+  // the upload path are deterministic on machines with no local ccusage data
+  // (e.g. CI). Same spirit as CCUSAGE_HUB_CONFIG. Never set in real use.
+  const injected = process.env.CCUSAGE_HUB_TEST_ROWS;
+  if (injected !== undefined) {
+    const parsed: unknown = JSON.parse(injected);
+    if (!Array.isArray(parsed)) throw new Error("CCUSAGE_HUB_TEST_ROWS must be a JSON array");
+    return parsed;
+  }
+
   const cliJs = resolveCcusageCli();
   const since = sinceDate(sinceDays);
 

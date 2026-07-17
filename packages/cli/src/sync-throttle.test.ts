@@ -85,12 +85,31 @@ describe("sync --min-interval", () => {
   });
 
   // A failed sync must NOT start the window: the next hook has to retry.
+  // Inject a row so the upload to the dead endpoint actually runs and fails,
+  // deterministically, regardless of whether this machine has ccusage data.
   it("does not record the time when the sync fails", () => {
     const cfg = setup(null);
-    const first = runCli(["sync", "--min-interval", "3600", "--since-days", "0"], cfg);
-    expect(first.status).toBe(1);
-    const second = runCli(["sync", "--min-interval", "3600", "--since-days", "0"], cfg);
-    expect(second.stdout).not.toContain("Skipped");
+    const row = JSON.stringify([
+      {
+        agent: "claude",
+        date: "2026-07-15",
+        model: "claude-opus-4-8",
+        inputTokens: 1,
+        outputTokens: 1,
+        cacheCreationTokens: 0,
+        cacheReadTokens: 0,
+        costUsd: 0.01,
+      },
+    ]);
+    process.env.CCUSAGE_HUB_TEST_ROWS = row;
+    try {
+      const first = runCli(["sync", "--min-interval", "3600", "--since-days", "0"], cfg);
+      expect(first.status).toBe(1);
+      const second = runCli(["sync", "--min-interval", "3600", "--since-days", "0"], cfg);
+      expect(second.stdout).not.toContain("Skipped");
+    } finally {
+      delete process.env.CCUSAGE_HUB_TEST_ROWS;
+    }
   });
 
   // --quiet is hook mode: silent on stdout, always exit 0.
