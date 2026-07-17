@@ -24,7 +24,7 @@
   },
   "type": "module",
   "bin": {
-    "ccusage-hub": "./dist/index.cjs"
+    "ccusage-hub": "dist/index.cjs"
   },
   "files": [
     "dist"
