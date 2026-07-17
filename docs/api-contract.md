@@ -41,7 +41,12 @@ Deletes current session. `200 {"ok":true}`.
 ## POST /api/usage — API key auth (`ccu_...`)
 
 Upsert daily usage rows. Idempotent: rows overwrite by primary key (not accumulate),
-because ccusage always reports full-day totals. Accepting a key updates its `last_used_at`.
+because ccusage always reports full-day totals. Rows whose metrics are unchanged are
+left untouched (their `updated_at` does not move); they still count toward `upserted`,
+which reports rows accepted, not rows written.
+
+Accepting a key refreshes its `last_used_at`, throttled to at most once per 5 minutes —
+the value may lag actual use by up to that window.
 
 Request body:
 

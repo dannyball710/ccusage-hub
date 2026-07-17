@@ -127,6 +127,12 @@ usageRoutes.post("/api/usage", apiKeyAuth, async (c) => {
 
   const updatedAt = new Date().toISOString();
   const statements: D1PreparedStatement[] = [];
+  // The DO UPDATE carries a WHERE guard because D1 bills rows written, and an
+  // UPDATE that rewrites identical values still bills one. The CLI re-uploads a
+  // rolling window (--since-days, default 7), so most rows in a sync are closed
+  // days whose metrics can no longer change; the guard makes those cost nothing.
+  // Only `updated_at` differs on such a row, and nothing reads it -- so it must
+  // not appear in the comparison, or every row would look changed.
   const stmt = c.env.DB.prepare(
     `INSERT INTO usage_daily
        (machine, agent, date, model,
@@ -138,7 +144,12 @@ usageRoutes.post("/api/usage", apiKeyAuth, async (c) => {
        cache_creation_tokens = excluded.cache_creation_tokens,
        cache_read_tokens = excluded.cache_read_tokens,
        cost_usd = excluded.cost_usd,
-       updated_at = excluded.updated_at`
+       updated_at = excluded.updated_at
+     WHERE input_tokens IS NOT excluded.input_tokens
+        OR output_tokens IS NOT excluded.output_tokens
+        OR cache_creation_tokens IS NOT excluded.cache_creation_tokens
+        OR cache_read_tokens IS NOT excluded.cache_read_tokens
+        OR cost_usd IS NOT excluded.cost_usd`
   );
 
   for (let i = 0; i < rows.length; i++) {

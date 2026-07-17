@@ -3,6 +3,9 @@ import { generateToken, sha256Hex } from "./crypto";
 import type { AppEnv } from "./types";
 
 const SESSION_TTL_MS = 30 * 86400000; // 30 days
+// Coarsest granularity the dashboard's relative-time rendering distinguishes is
+// minutes, so refreshing last_used_at more often than this only costs writes.
+const LAST_USED_THROTTLE_MS = 5 * 60000; // 5 minutes
 export const ADMIN_PASSWORD_KEY = "admin_password";
 
 function bearer(c: { req: { header: (n: string) => string | undefined } }): string {
@@ -92,17 +95,31 @@ export const apiKeyAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
     return c.json({ ok: false, error: "unauthorized" }, 401);
   }
   const keyHash = await sha256Hex(key);
-  const row = await c.env.DB.prepare("SELECT id, revoked FROM api_keys WHERE key_hash = ?")
+  // last_used_at is selected here so the freshness check below costs no extra
+  // read: this is already a unique-index point lookup (1 row read either way).
+  const row = await c.env.DB.prepare(
+    "SELECT id, revoked, last_used_at FROM api_keys WHERE key_hash = ?"
+  )
     .bind(keyHash)
-    .first<{ id: string; revoked: number }>();
+    .first<{ id: string; revoked: number; last_used_at: string | null }>();
   if (!row || row.revoked) {
     return c.json({ ok: false, error: "unauthorized" }, 401);
   }
-  // Fire-and-forget: don't block the upload response on the last_used_at write.
-  c.executionCtx.waitUntil(
-    c.env.DB.prepare("UPDATE api_keys SET last_used_at = ? WHERE id = ?")
-      .bind(new Date().toISOString(), row.id)
-      .run()
-  );
+  const now = Date.now();
+  const lastUsed = row.last_used_at === null ? null : Date.parse(row.last_used_at);
+  // Every upload would otherwise bill a row written just to refresh this stamp,
+  // and D1 bills writes at 1000x the price of reads. The dashboard renders the
+  // value as coarse relative time ("3m ago"), so a stamp up to the throttle
+  // window stale reads identically to the user. An unparseable stamp (NaN) fails
+  // the comparison and refreshes, which self-heals a corrupt value.
+  const isFresh = lastUsed !== null && now - lastUsed < LAST_USED_THROTTLE_MS;
+  if (!isFresh) {
+    // Fire-and-forget: don't block the upload response on the last_used_at write.
+    c.executionCtx.waitUntil(
+      c.env.DB.prepare("UPDATE api_keys SET last_used_at = ? WHERE id = ?")
+        .bind(new Date(now).toISOString(), row.id)
+        .run()
+    );
+  }
   await next();
 };

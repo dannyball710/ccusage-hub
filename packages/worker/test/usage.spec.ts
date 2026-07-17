@@ -33,6 +33,11 @@ async function adminAndKey(): Promise<{ session: string; key: string }> {
   return { session, key };
 }
 
+async function storedUpdatedAt(): Promise<string | undefined> {
+  const r = await env.DB.prepare("SELECT updated_at FROM usage_daily").first<{ updated_at: string }>();
+  return r?.updated_at;
+}
+
 async function usageDailyCount(): Promise<number> {
   const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM usage_daily").first<{ n: number }>();
   return r?.n ?? -1;
@@ -217,6 +222,37 @@ describe("POST /api/usage upsert", () => {
     const stored = await env.DB.prepare("SELECT input_tokens FROM usage_daily").first<{ input_tokens: number }>();
     expect(stored?.input_tokens).toBe(150);
     expect(await usageDailyCount()).toBe(1);
+  });
+
+  // D1 bills rows written, and an UPDATE rewriting identical values still bills
+  // one. The CLI re-uploads a rolling window of closed days on every sync, so
+  // the upsert must skip rows whose metrics are unchanged. updated_at is the
+  // observable proxy: it only moves when the row is actually written.
+  it("skips the write when a re-uploaded row is unchanged", async () => {
+    const { key } = await adminAndKey();
+    await postJson("/api/usage", { machine: "m", rows: [row({ inputTokens: 100 })] }, key);
+    const first = await storedUpdatedAt();
+
+    const res = await postJson("/api/usage", { machine: "m", rows: [row({ inputTokens: 100 })] }, key);
+
+    // Still reported as upserted: the count is rows accepted, not rows written.
+    expect(await json(res)).toEqual({ ok: true, upserted: 1 });
+    expect(await storedUpdatedAt()).toBe(first);
+  });
+
+  it("still writes when a re-uploaded row's metrics changed", async () => {
+    const { key } = await adminAndKey();
+    await postJson("/api/usage", { machine: "m", rows: [row({ costUsd: 0.5 })] }, key);
+    // Sentinel: two uploads can land in the same millisecond, so a fresh
+    // updated_at is only distinguishable from a stamp that cannot recur.
+    const sentinel = "2000-01-01T00:00:00.000Z";
+    await env.DB.prepare("UPDATE usage_daily SET updated_at = ?").bind(sentinel).run();
+
+    await postJson("/api/usage", { machine: "m", rows: [row({ costUsd: 0.75 })] }, key);
+
+    const stored = await env.DB.prepare("SELECT cost_usd FROM usage_daily").first<{ cost_usd: number }>();
+    expect(stored?.cost_usd).toBe(0.75);
+    expect(await storedUpdatedAt()).not.toBe(sentinel);
   });
 
   it("handles uploads larger than one D1 batch (USAGE_BATCH_SIZE)", async () => {
