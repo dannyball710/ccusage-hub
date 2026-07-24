@@ -35,7 +35,7 @@
     "test": "pnpm build && vitest run"
   },
   "dependencies": {
-    "ccusage": "20.0.17",
+    "ccusage": "20.0.18",
     "smol-toml": "1.7.0",
     "yaml": "2.9.0"
   },
